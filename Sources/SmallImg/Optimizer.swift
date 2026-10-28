@@ -61,11 +61,11 @@ enum Optimizer {
     /// 就地最佳化：永遠從原檔（備份）重新開始，只在變小或使用者明確要求變形時才取代。
     static func optimise(_ url: URL, _ o: Options, settings: SettingsData, progress: ProgressHandler? = nil) async throws -> OptimiseResult {
         let fm = FileManager.default
-        guard fm.fileExists(atPath: url.path) else { throw ToolError.message("檔案不存在：\(url.lastPathComponent)") }
+        guard fm.fileExists(atPath: url.path) else { throw ToolError.message(L("檔案不存在：%@", url.lastPathComponent)) }
         let src = Backups.shared.original(for: url) ?? url
         let originalSize = src.fileSize
         let kind = src.mediaKind
-        guard kind != .other else { throw ToolError.message("不支援的檔案類型") }
+        guard kind != .other else { throw ToolError.message(L("不支援的檔案類型")) }
         let (target, ext) = resolveTarget(src, o, settings)
         if target == .keep && kind != .pdf {
             return OptimiseResult(url: url, originalSize: originalSize, newSize: url.fileSize, skipped: true)
@@ -77,7 +77,7 @@ enum Optimizer {
         let newSize = tmp.fileSize
         guard newSize > 0 else {
             try? fm.removeItem(at: tmp)
-            throw ToolError.message("輸出檔是空的")
+            throw ToolError.message(L("輸出檔是空的"))
         }
         let formatChanged = ext != src.pathExtension.lowercased()
         if !o.isTransform && !formatChanged && newSize >= Int64(Double(originalSize) * 0.98) {
@@ -130,17 +130,17 @@ enum Optimizer {
     ) async throws -> URL {
         switch kind {
         case .image:
-            if target.kind == .video || target.kind == .audio { throw ToolError.message("圖片不能轉成 \(target.label)") }
+            if target.kind == .video || target.kind == .audio { throw ToolError.message(L("圖片不能轉成 %@", target.label)) }
             return try await ImageRender.render(src, target: target, o)
         case .video:
-            if target.kind == .image || target.kind == .audio { throw ToolError.message("影片不能轉成 \(target.label)") }
+            if target.kind == .image || target.kind == .audio { throw ToolError.message(L("影片不能轉成 %@", target.label)) }
             return try await VideoRender.render(src, target: target, ext: ext, o, s, progress)
         case .audio:
             return try await AudioRender.render(src, target: target, ext: ext, o, progress)
         case .pdf:
             return try await PDFRender.render(src, o)
         case .other:
-            throw ToolError.message("不支援的檔案類型")
+            throw ToolError.message(L("不支援的檔案類型"))
         }
     }
 

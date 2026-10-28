@@ -45,11 +45,11 @@ enum MediaKind: String, Codable, CaseIterable {
 
     var label: String {
         switch self {
-        case .image: return "圖片"
-        case .video: return "影片"
+        case .image: return L("圖片")
+        case .video: return L("影片")
         case .pdf: return "PDF"
-        case .audio: return "音訊"
-        case .other: return "其他"
+        case .audio: return L("音訊")
+        case .other: return L("其他")
         }
     }
 }
@@ -108,7 +108,7 @@ enum Target: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .keep: return "保持原格式"
+        case .keep: return L("保持原格式")
         case .png: return "PNG"
         case .jpeg: return "JPEG"
         case .webp: return "WebP"

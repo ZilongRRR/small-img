@@ -70,11 +70,11 @@ final class Backups {
 
     /// 還原原檔，回傳還原後的路徑。
     func restore(_ url: URL) throws -> URL {
-        guard let e = entry(for: url) else { throw ToolError.message("沒有這個檔案的備份") }
+        guard let e = entry(for: url) else { throw ToolError.message(L("沒有這個檔案的備份")) }
         let fm = FileManager.default
         let backup = URL(fileURLWithPath: e.backupPath)
         let original = URL(fileURLWithPath: e.originalPath)
-        guard fm.fileExists(atPath: backup.path) else { throw ToolError.message("備份檔已被刪除") }
+        guard fm.fileExists(atPath: backup.path) else { throw ToolError.message(L("備份檔已被刪除")) }
         if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
         if original.path != url.path, fm.fileExists(atPath: original.path) { try fm.removeItem(at: original) }
         try fm.copyItem(at: backup, to: original)

@@ -9,21 +9,34 @@ struct ResultCard: View {
     @EnvironmentObject var jobs: Jobs
     @ObservedObject var settings = AppSettings.shared
     var wide = false
-    /// 游標停在按鈕上時顯示的說明。浮動視窗不會啟用 App，系統 tooltip 出不來，所以自己畫。
+    /// 游標停在按鈕上時，標題列暫時改成按鈕說明。浮動視窗不會啟用 App，系統 tooltip 出不來，所以自己畫。
     @State private var hint: String?
+
+    init(item: ResultItem, wide: Bool = false, hint: String? = nil) {
+        _item = ObservedObject(wrappedValue: item)
+        self.wide = wide
+        _hint = State(initialValue: hint)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             thumbnail
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Text(item.displayName)
-                        .font(.system(size: 12, weight: .semibold))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    if let hint {
+                        Text(hint)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.accentColor)
+                            .lineLimit(1)
+                    } else {
+                        Text(item.displayName)
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                     Spacer(minLength: 4)
                     if !wide {
-                        IconButton(symbol: "xmark", help: "關閉") { jobs.dismiss(item) }
+                        IconButton(symbol: "xmark", help: L("關閉")) { jobs.dismiss(item) }
                     }
                 }
                 statusLine
@@ -71,13 +84,13 @@ struct ResultCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .onDrag { NSItemProvider(object: item.url as NSURL) }
         .onTapGesture(count: 2) { jobs.open(item) }
-        .hint("拖出檔案，或點兩下打開")
+        .hint(L("拖出檔案，或點兩下打開"))
     }
 
     @ViewBuilder private var statusLine: some View {
         switch item.status {
         case .queued:
-            Text("排隊中").font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(L("排隊中")).font(.system(size: 11)).foregroundStyle(.secondary)
         case .working:
             HStack(spacing: 6) {
                 if let p = item.progress {
@@ -85,9 +98,9 @@ struct ResultCard: View {
                     Text("\(Int(p * 100))%").font(.system(size: 10).monospacedDigit()).foregroundStyle(.secondary)
                 } else {
                     ProgressView().controlSize(.small)
-                    Text("壓縮中").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(L("壓縮中")).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
-                IconButton(symbol: "stop.circle", help: "停止") { jobs.cancel(item) }
+                IconButton(symbol: "stop.circle", help: L("停止")) { jobs.cancel(item) }
             }
         case .done:
             HStack(spacing: 6) {
@@ -102,10 +115,10 @@ struct ResultCard: View {
                 }
             }
         case .skipped:
-            Text("已經是最佳大小 · \(formatBytes(item.newSize ?? item.originalSize))")
+            Text(L("已經是最佳大小 · %@", formatBytes(item.newSize ?? item.originalSize)))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
         case .restored:
-            Text("已還原原檔 · \(formatBytes(item.newSize ?? item.originalSize))")
+            Text(L("已還原原檔 · %@", formatBytes(item.newSize ?? item.originalSize)))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
         case .failed(let msg):
             Text(msg).font(.system(size: 11)).foregroundStyle(.red).lineLimit(2)
@@ -115,14 +128,14 @@ struct ResultCard: View {
     private var chips: [String] {
         let o = item.options
         var c: [String] = []
-        if o.aggressive { c.append("強力") }
+        if o.aggressive { c.append(L("強力")) }
         if o.scale < 0.999 { c.append("\(Int((o.scale * 100).rounded()))%") }
-        if let cr = o.crop { c.append("裁切 \(cr.label)") }
+        if let cr = o.crop { c.append(L("裁切 %@", cr.label)) }
         if let f = o.fitUnder { c.append("< \(formatBytes(f))") }
         if o.speed != 1 { c.append("\(o.speed.clean)x") }
-        if o.mute { c.append("靜音") }
+        if o.mute { c.append(L("靜音")) }
         if let l = o.loudness { c.append("\(Int(l)) LUFS") }
-        if o.watermark != nil { c.append("浮水印") }
+        if o.watermark != nil { c.append(L("浮水印")) }
         return c
     }
 
@@ -131,21 +144,23 @@ struct ResultCard: View {
     private var toolbar: some View {
         HStack(spacing: 2) {
             if item.status == .restored {
-                Button("改回壓縮") { jobs.start(item) }
+                Button(L("改回壓縮")) { jobs.start(item) }
                     .buttonStyle(FormatButtonStyle())
-                    .hint("重新壓縮這個檔案（原檔會再備份一次）")
+                    .fixedSize()
+                    .hint(L("重新壓縮這個檔案"))
                     .padding(.trailing, 4)
             } else if item.canRestore || item.isClipboard {
-                Button("保留原檔") { jobs.restore(item) }
+                Button(L("保留原檔")) { jobs.restore(item) }
                     .buttonStyle(FormatButtonStyle())
-                    .hint("不要壓縮，換回原本的檔案（快捷鍵 z）")
+                    .fixedSize()
+                    .hint(L("不要壓縮，換回原本的檔案（快捷鍵 z）"))
                     .padding(.trailing, 4)
                     .disabled(busy)
             }
             if !item.isClipboard {
-                IconButton(symbol: "folder", help: "在 Finder 顯示") { jobs.reveal(item) }
+                IconButton(symbol: "folder", help: L("在 Finder 顯示")) { jobs.reveal(item) }
             }
-            IconButton(symbol: "doc.on.doc", help: "複製") { jobs.copy(item) }
+            IconButton(symbol: "doc.on.doc", help: L("複製")) { jobs.copy(item) }
 
             if item.kind == .image || item.kind == .video {
                 Menu {
@@ -153,14 +168,14 @@ struct ResultCard: View {
                         Button("\(p)%") { jobs.setScale(item, Double(p) / 100) }
                     }
                     Divider()
-                    Button("原始大小") { jobs.setScale(item, 1) }
+                    Button(L("原始大小")) { jobs.setScale(item, 1) }
                 } label: {
                     Image(systemName: "minus.magnifyingglass")
                 } primaryAction: {
                     jobs.downscaleStep(item)
                 }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .hint("縮小尺寸（-，1 到 9 為 10% 到 90%）")
+                .hint(L("縮小尺寸（快捷鍵 -，1 到 9 為 10% 到 90%）"))
                 .disabled(busy)
 
                 Menu {
@@ -168,97 +183,86 @@ struct ResultCard: View {
                         Button(c.label) { jobs.setCrop(item, c) }
                     }
                     Divider()
-                    Button("自訂比例或尺寸…") {
-                        if let s = Notifier.ask("裁切", "輸入比例（例如 16:9）或像素尺寸（例如 1200x630）"), let c = CropSpec.parse(s) {
+                    Button(L("自訂比例或尺寸…")) {
+                        if let s = Notifier.ask(L("裁切"), L("輸入比例（例如 16:9）或像素尺寸（例如 1200x630）")), let c = CropSpec.parse(s) {
                             jobs.setCrop(item, c)
                         }
                     }
-                    if item.options.crop != nil { Button("取消裁切") { jobs.setCrop(item, nil) } }
+                    if item.options.crop != nil { Button(L("取消裁切")) { jobs.setCrop(item, nil) } }
                 } label: { Image(systemName: "crop") }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .hint("裁切成指定比例或尺寸")
+                .hint(L("裁切比例或尺寸"))
                 .disabled(busy)
             }
 
             Menu {
-                Button("8 MB（Discord）") { jobs.setFit(item, 8_000_000) }
+                Button(L("8 MB（Discord）")) { jobs.setFit(item, 8_000_000) }
                 Button("10 MB") { jobs.setFit(item, 10_000_000) }
-                Button("25 MB（Gmail）") { jobs.setFit(item, 25_000_000) }
+                Button(L("25 MB（Gmail）")) { jobs.setFit(item, 25_000_000) }
                 Button("50 MB") { jobs.setFit(item, 50_000_000) }
                 Button("1 MB") { jobs.setFit(item, 1_000_000) }
                 Button("500 KB") { jobs.setFit(item, 500_000) }
                 Divider()
-                Button("自訂大小…") {
-                    if let s = Notifier.ask("壓到指定大小以下", "例如 5MB、800KB"), let b = parseBytes(s) { jobs.setFit(item, b) }
+                Button(L("自訂大小…")) {
+                    if let s = Notifier.ask(L("壓到指定大小以下"), L("例如 5MB、800KB")), let b = parseBytes(s) { jobs.setFit(item, b) }
                 }
-                if item.options.fitUnder != nil { Button("取消大小限制") { jobs.setFit(item, nil) } }
+                if item.options.fitUnder != nil { Button(L("取消大小限制")) { jobs.setFit(item, nil) } }
             } label: { Image(systemName: "scalemass") }
             .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-            .hint("壓到指定檔案大小以下")
+            .hint(L("壓到指定大小以下"))
             .disabled(busy)
 
             moreMenu
-
-            Spacer(minLength: 6)
-            if let hint {
-                Text(hint)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .transition(.opacity)
-            }
         }
         .font(.system(size: 12))
-        .animation(.easeOut(duration: 0.12), value: hint)
     }
 
     private var moreMenu: some View {
         Menu {
-            Toggle("強力壓縮", isOn: Binding(get: { item.options.aggressive }, set: { _ in jobs.toggleAggressive(item) }))
+            Toggle(L("強力壓縮"), isOn: Binding(get: { item.options.aggressive }, set: { _ in jobs.toggleAggressive(item) }))
             if item.kind == .video || item.kind == .audio {
-                Menu("速度") {
+                Menu(L("速度")) {
                     ForEach([0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4], id: \.self) { v in
                         Button("\(v.clean)x") { jobs.setSpeed(item, v) }
                     }
                 }
             }
             if item.kind == .video {
-                Button(item.options.mute ? "保留音訊" : "移除音訊") { jobs.toggleMute(item) }
+                Button(item.options.mute ? L("保留音訊") : L("移除音訊")) { jobs.toggleMute(item) }
             }
             if item.kind == .video || item.kind == .audio {
-                Menu("響度標準化") {
-                    Button("-14 LUFS（串流平台）") { jobs.setLoudness(item, -14) }
-                    Button("-16 LUFS（Apple Music）") { jobs.setLoudness(item, -16) }
-                    if item.options.loudness != nil { Button("不調整") { jobs.setLoudness(item, nil) } }
+                Menu(L("響度標準化")) {
+                    Button(L("-14 LUFS（串流平台）")) { jobs.setLoudness(item, -14) }
+                    Button(L("-16 LUFS（Apple Music）")) { jobs.setLoudness(item, -16) }
+                    if item.options.loudness != nil { Button(L("不調整")) { jobs.setLoudness(item, nil) } }
                 }
             }
             if item.kind == .image {
-                Button("加浮水印…") {
-                    if let t = Notifier.ask("浮水印", "輸入文字，或標誌圖片的路徑", item.options.watermark ?? "") { jobs.setWatermark(item, t) }
+                Button(L("加浮水印…")) {
+                    if let t = Notifier.ask(L("浮水印"), L("輸入文字，或標誌圖片的路徑"), item.options.watermark ?? "") { jobs.setWatermark(item, t) }
                 }
-                if item.options.watermark != nil { Button("移除浮水印") { jobs.setWatermark(item, nil) } }
+                if item.options.watermark != nil { Button(L("移除浮水印")) { jobs.setWatermark(item, nil) } }
             }
             if item.kind == .pdf {
-                Menu("裁切頁邊對齊裝置") {
+                Menu(L("裁切頁邊對齊裝置")) {
                     ForEach(PDFCropper.devices, id: \.0) { d in
                         Button(d.0) { jobs.cropPDF(item, aspect: d.1 / d.2, name: d.0) }
                     }
                 }
             }
-            Menu("執行流程") {
+            Menu(L("執行流程")) {
                 ForEach(settings.data.pipelines) { p in
                     Button(p.name) { jobs.runPipeline(item, p) }
                 }
             }
             Divider()
-            Button("打開") { jobs.open(item) }
+            Button(L("打開")) { jobs.open(item) }
             if item.lastConversion != nil {
-                Button("在 Finder 顯示轉檔結果") { NSWorkspace.shared.activateFileViewerSelecting([item.lastConversion!]) }
+                Button(L("在 Finder 顯示轉檔結果")) { NSWorkspace.shared.activateFileViewerSelecting([item.lastConversion!]) }
             }
         } label: { Image(systemName: "ellipsis.circle") }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-        .hint("更多：強力壓縮、浮水印、流程…")
+        .hint(L("更多：強力壓縮、浮水印、執行流程"))
         .disabled(busy)
     }
 
@@ -266,14 +270,14 @@ struct ResultCard: View {
         let targets = Target.targets(for: item.kind).filter { $0.ext != item.url.pathExtension.lowercased() || $0 == .hevc || $0 == .av1 }
         if !targets.isEmpty {
             HStack(spacing: 4) {
-                Text("轉成").font(.system(size: 10)).foregroundStyle(.secondary)
+                Text(L("轉成")).font(.system(size: 10)).foregroundStyle(.secondary)
                 ForEach(targets) { t in
                     Button(t.label) {
                         let keep = NSEvent.modifierFlags.contains(.option)
                         jobs.convert(item, to: t, keepPrevious: keep)
                     }
                     .buttonStyle(FormatButtonStyle())
-                    .hint("另存成 \(t.label)（Option 保留上次轉檔）")
+                    .hint(L("另存成 %@（按住 Option 保留上次轉檔）", t.label))
                 }
             }
             .disabled(busy)

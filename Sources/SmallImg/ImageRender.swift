@@ -62,7 +62,7 @@ enum ImageRender {
         let out = Paths.tempFile(ext: target.ext)
 
         if target == .gif {
-            guard srcExt == "gif" else { throw ToolError.message("只有 GIF 可以輸出 GIF 圖片") }
+            guard srcExt == "gif" else { throw ToolError.message(L("只有 GIF 可以輸出 GIF 圖片")) }
             var args = ["-O3", "--lossy=\(max(0, (100 - q) * 2))", "--no-warnings"]
             if let size = pixelSize(src) {
                 let (w0, h0) = size
@@ -100,7 +100,7 @@ enum ImageRender {
                 input = try drawPixels(src, o, scale: s, type: .png, quality: 100)
             }
         default:
-            throw ToolError.message("不支援輸出 \(target.label) 圖片")
+            throw ToolError.message(L("不支援輸出 %@ 圖片", target.label))
         }
         defer { if input != src { try? fm.removeItem(at: input) } }
 
@@ -136,7 +136,7 @@ enum ImageRender {
               let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let pw = props[kCGImagePropertyPixelWidth] as? Int,
               let ph = props[kCGImagePropertyPixelHeight] as? Int
-        else { throw ToolError.message("無法讀取圖片") }
+        else { throw ToolError.message(L("無法讀取圖片")) }
 
         let thumbOpts: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -145,7 +145,7 @@ enum ImageRender {
             kCGImageSourceShouldCacheImmediately: true,
         ]
         guard var img = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOpts as CFDictionary) else {
-            throw ToolError.message("無法解碼圖片")
+            throw ToolError.message(L("無法解碼圖片"))
         }
         if let c = o.crop {
             let r = c.rect(width: Double(img.width), height: Double(img.height))
@@ -163,7 +163,7 @@ enum ImageRender {
             guard let ctx = CGContext(
                 data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: cs,
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { throw ToolError.message("無法建立繪圖區") }
+            ) else { throw ToolError.message(L("無法建立繪圖區")) }
             ctx.interpolationQuality = .high
             ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
             if let watermark { drawWatermark(watermark, in: ctx, width: w, height: h) }
@@ -172,7 +172,7 @@ enum ImageRender {
 
         let out = dest ?? Paths.tempFile(ext: type.preferredFilenameExtension ?? "png")
         guard let destRef = CGImageDestinationCreateWithURL(out as CFURL, type.identifier as CFString, 1, nil) else {
-            throw ToolError.message("無法寫出圖片")
+            throw ToolError.message(L("無法寫出圖片"))
         }
         var meta: [CFString: Any] = [:]
         for key in [kCGImagePropertyExifDictionary, kCGImagePropertyGPSDictionary, kCGImagePropertyIPTCDictionary] {
@@ -185,7 +185,7 @@ enum ImageRender {
         meta[kCGImagePropertyOrientation] = 1
         if type != .png { meta[kCGImageDestinationLossyCompressionQuality] = Double(q) / 100 }
         CGImageDestinationAddImage(destRef, img, meta as CFDictionary)
-        guard CGImageDestinationFinalize(destRef) else { throw ToolError.message("寫出圖片失敗") }
+        guard CGImageDestinationFinalize(destRef) else { throw ToolError.message(L("寫出圖片失敗")) }
         return out
     }
 

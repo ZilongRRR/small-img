@@ -38,14 +38,20 @@ final class ResultItem: ObservableObject, Identifiable {
 
     var kind: MediaKind { url.mediaKind }
     var isClipboard: Bool { clipboardOriginal != nil }
-    var displayName: String { isClipboard ? "剪貼簿圖片" : url.lastPathComponent }
+    var displayName: String { isClipboard ? L("剪貼簿圖片") : url.lastPathComponent }
 
     var savedPercent: Int? {
         guard let n = newSize, originalSize > 0 else { return nil }
         return Int(((1 - Double(n) / Double(originalSize)) * 100).rounded())
     }
 
+    #if DEBUG
+    /// 文件截圖用：假裝有備份
+    var previewRestorable = false
+    var canRestore: Bool { previewRestorable || Backups.shared.entry(for: url) != nil }
+    #else
     var canRestore: Bool { Backups.shared.entry(for: url) != nil }
+    #endif
 }
 
 @MainActor
@@ -96,7 +102,7 @@ final class Jobs: ObservableObject {
                     try FileManager.default.moveItem(at: tmp, to: dest)
                     handle([dest], aggressive: aggressive, pipeline: pipeline)
                 } catch {
-                    Notifier.error("下載失敗：\(error.localizedDescription)")
+                    Notifier.error(L("下載失敗：%@", error.localizedDescription))
                 }
             }
         }
@@ -106,7 +112,7 @@ final class Jobs: ObservableObject {
         Paths.ensure(Paths.clipboard)
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let url = Paths.clipboard.appendingPathComponent("剪貼簿 \(f.string(from: Date())).\(ext)").uniqueAvailable
+        let url = Paths.clipboard.appendingPathComponent(L("剪貼簿 %@.%@", f.string(from: Date()), ext)).uniqueAvailable
         do { try data.write(to: url) } catch { return }
         var o = Options()
         o.aggressive = settings.aggressive
@@ -168,7 +174,7 @@ final class Jobs: ObservableObject {
                     let outcome = try await PipelineRunner.run(p, url: url, base: opts, settings: settings, progress: progress)
                     result = outcome.result ?? OptimiseResult(url: outcome.url, originalSize: item.originalSize, newSize: outcome.url.fileSize, skipped: true)
                     result.url = outcome.url
-                    item.note = "已執行流程：\(p.name)"
+                    item.note = L("已執行流程：%@", p.name)
                 } else {
                     result = try await Optimizer.optimise(url, opts, settings: settings, progress: progress)
                 }
@@ -181,7 +187,7 @@ final class Jobs: ObservableObject {
                 if item.isClipboard && !result.skipped { writeClipboard(item.url, for: item) }
                 loadThumbnail(item)
             } catch is CancellationError {
-                item.status = .failed("已取消")
+                item.status = .failed(L("已取消"))
             } catch {
                 item.status = .failed(error.localizedDescription)
                 item.progress = nil
@@ -231,10 +237,10 @@ final class Jobs: ObservableObject {
                 item.lastConversion = out
                 item.status = item.newSize == nil ? .skipped : .done
                 item.progress = nil
-                item.note = "已另存 \(out.lastPathComponent)（\(formatBytes(out.fileSize))）"
+                item.note = L("已另存 %@（%@）", out.lastPathComponent, formatBytes(out.fileSize))
                 if item.isClipboard { writeClipboard(out, for: item) }
             } catch is CancellationError {
-                item.status = .failed("已取消")
+                item.status = .failed(L("已取消"))
             } catch {
                 item.status = .failed(error.localizedDescription)
                 item.progress = nil
@@ -251,7 +257,7 @@ final class Jobs: ObservableObject {
                 item.url = out
                 item.newSize = out.fileSize
                 item.status = .done
-                item.note = "已依 \(name) 裁切頁邊"
+                item.note = L("已依 %@ 裁切頁邊", name)
                 loadThumbnail(item)
             } catch {
                 item.status = .failed(error.localizedDescription)
@@ -306,7 +312,7 @@ final class Jobs: ObservableObject {
         }
         ClipboardWatcher.shared.lastChange = pb.changeCount
         if item.isClipboard { item.clipboardChangeCount = pb.changeCount }
-        item.note = "已複製"
+        item.note = L("已複製")
     }
 
     func dismiss(_ item: ResultItem) {
@@ -331,7 +337,7 @@ final class Jobs: ObservableObject {
     func writeClipboard(_ url: URL, for item: ResultItem) {
         let pb = NSPasteboard.general
         guard pb.changeCount == item.clipboardChangeCount else {
-            item.note = "剪貼簿已換成別的內容，沒有寫回"
+            item.note = L("剪貼簿已換成別的內容，沒有寫回")
             return
         }
         guard let data = try? Data(contentsOf: url) else { return }
@@ -382,8 +388,8 @@ enum Notifier {
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
         field.stringValue = defaultValue
         alert.accessoryView = field
-        alert.addButton(withTitle: "確定")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: L("確定"))
+        alert.addButton(withTitle: L("取消"))
         NSApp.activate(ignoringOtherApps: true)
         alert.window.initialFirstResponder = field
         guard alert.runModal() == .alertFirstButtonReturn else { return nil }

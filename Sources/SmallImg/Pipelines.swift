@@ -20,41 +20,41 @@ enum Step: Codable, Hashable {
 
     var label: String {
         switch self {
-        case .optimise(let a): return a ? "強力最佳化" : "最佳化"
-        case .scale(let p): return "縮放到 \(p)%"
-        case .maxWidth(let px): return "寬度上限 \(px) px"
-        case .crop(let c): return "裁切 \(c.label)"
-        case .convert(let t): return "轉成 \(t.label)"
-        case .fitUnder(let mb): return "壓到 \(mb.clean) MB 以下"
-        case .watermark(let t): return "浮水印：\(t)"
-        case .mute: return "移除音訊"
-        case .speed(let s): return "速度 \(s.clean)x"
-        case .loudness(let l): return "響度 \(Int(l)) LUFS"
-        case .moveTo(let p): return "移到 \(p)"
-        case .copyFile: return "複製檔案到剪貼簿"
-        case .copyPath: return "複製路徑"
-        case .copyMarkdown: return "複製成 Markdown 連結"
-        case .shell(let c): return "執行指令：\(c)"
+        case .optimise(let a): return a ? L("強力最佳化") : L("最佳化")
+        case .scale(let p): return L("縮放到 %@%", p)
+        case .maxWidth(let px): return L("寬度上限 %@ px", px)
+        case .crop(let c): return L("裁切 %@", c.label)
+        case .convert(let t): return L("轉成 %@", t.label)
+        case .fitUnder(let mb): return L("壓到 %@ MB 以下", mb.clean)
+        case .watermark(let t): return L("浮水印：%@", t)
+        case .mute: return L("移除音訊")
+        case .speed(let s): return L("速度 %@x", s.clean)
+        case .loudness(let l): return L("響度 %@ LUFS", Int(l))
+        case .moveTo(let p): return L("移到 %@", p)
+        case .copyFile: return L("複製檔案到剪貼簿")
+        case .copyPath: return L("複製路徑")
+        case .copyMarkdown: return L("複製成 Markdown 連結")
+        case .shell(let c): return L("執行指令：%@", c)
         }
     }
 
     /// 新增步驟選單用的預設值
     static let templates: [(String, Step)] = [
-        ("最佳化", .optimise(aggressive: false)),
-        ("縮放", .scale(percent: 50)),
-        ("寬度上限", .maxWidth(px: 1920)),
-        ("裁切", .crop(CropSpec(w: 16, h: 9))),
-        ("轉檔", .convert(.webp)),
-        ("壓到指定大小以下", .fitUnder(mb: 8)),
-        ("浮水印", .watermark(text: "© 我的名字")),
-        ("移除音訊", .mute),
-        ("調整速度", .speed(2)),
-        ("響度標準化", .loudness(-14)),
-        ("移到資料夾", .moveTo(path: "~/Pictures/截圖/{yyyy}-{MM}")),
-        ("複製檔案到剪貼簿", .copyFile),
-        ("複製路徑", .copyPath),
-        ("複製成 Markdown 連結", .copyMarkdown),
-        ("執行 shell 指令", .shell(command: "open -R \"$FILE\"")),
+        (L("最佳化"), .optimise(aggressive: false)),
+        (L("縮放"), .scale(percent: 50)),
+        (L("寬度上限"), .maxWidth(px: 1920)),
+        (L("裁切"), .crop(CropSpec(w: 16, h: 9))),
+        (L("轉檔"), .convert(.webp)),
+        (L("壓到指定大小以下"), .fitUnder(mb: 8)),
+        (L("浮水印"), .watermark(text: L("© 我的名字"))),
+        (L("移除音訊"), .mute),
+        (L("調整速度"), .speed(2)),
+        (L("響度標準化"), .loudness(-14)),
+        (L("移到資料夾"), .moveTo(path: L("~/Pictures/截圖/{yyyy}-{MM}"))),
+        (L("複製檔案到剪貼簿"), .copyFile),
+        (L("複製路徑"), .copyPath),
+        (L("複製成 Markdown 連結"), .copyMarkdown),
+        (L("執行 shell 指令"), .shell(command: "open -R \"$FILE\"")),
     ]
 }
 
@@ -70,11 +70,11 @@ struct Pipeline: Codable, Identifiable, Hashable {
 
     static var builtins: [Pipeline] {
         [
-            Pipeline(name: "轉成 WebP", steps: [.convert(.webp)], showInDropZone: true),
-            Pipeline(name: "整理截圖", steps: [.optimise(aggressive: false), .moveTo(path: "~/Pictures/截圖/{yyyy}-{MM}")]),
-            Pipeline(name: "縮小一半再轉 WebP", steps: [.scale(percent: 50), .convert(.webp)], showInDropZone: true),
-            Pipeline(name: "壓到 8 MB（Discord）", steps: [.fitUnder(mb: 8)], showInDropZone: true),
-            Pipeline(name: "裁成 16:9 並複製路徑", steps: [.crop(CropSpec(w: 16, h: 9)), .optimise(aggressive: false), .copyPath]),
+            Pipeline(name: L("轉成 WebP"), steps: [.convert(.webp)], showInDropZone: true),
+            Pipeline(name: L("整理截圖"), steps: [.optimise(aggressive: false), .moveTo(path: L("~/Pictures/截圖/{yyyy}-{MM}"))]),
+            Pipeline(name: L("縮小一半再轉 WebP"), steps: [.scale(percent: 50), .convert(.webp)], showInDropZone: true),
+            Pipeline(name: L("壓到 8 MB（Discord）"), steps: [.fitUnder(mb: 8)], showInDropZone: true),
+            Pipeline(name: L("裁成 16:9 並複製路徑"), steps: [.crop(CropSpec(w: 16, h: 9)), .optimise(aggressive: false), .copyPath]),
         ]
     }
 }
@@ -138,7 +138,7 @@ enum PipelineRunner {
             case .shell(let cmd):
                 try await flush()
                 let r = try await runProcess("/bin/zsh", ["-lc", cmd], env: ["FILE": current.path])
-                if r.status != 0 { throw ToolError.failed("指令", r.status, r.stderr) }
+                if r.status != 0 { throw ToolError.failed(L("指令"), r.status, r.stderr) }
             }
         }
         try await flush()

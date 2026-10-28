@@ -78,8 +78,8 @@ struct FloatingDropZone: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            DropTile(title: "最佳化", subtitle: "按住 Command 放開為強力壓縮", symbol: "arrow.down.right.and.arrow.up.left", height: 70)
-            DropTile(title: "強力最佳化", subtitle: "更小的檔案，畫質稍降", symbol: "bolt", height: 44, aggressive: true)
+            DropTile(title: L("最佳化"), subtitle: L("按住 Command 放開為強力壓縮"), symbol: "arrow.down.right.and.arrow.up.left", height: 70)
+            DropTile(title: L("強力最佳化"), subtitle: L("更小的檔案，畫質稍降"), symbol: "bolt", height: 44, aggressive: true)
             ForEach(settings.data.pipelines.filter(\.showInDropZone)) { p in
                 DropTile(title: p.name, subtitle: p.steps.map(\.label).joined(separator: " → "), symbol: "square.stack.3d.down.right", height: 44, pipeline: p)
             }
@@ -187,30 +187,30 @@ struct MainView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             DropTile(
-                title: "拖曳圖片、影片、PDF 或音訊到這裡",
-                subtitle: "就地壓縮並保留備份。按住 Command 放開為強力壓縮，也可以拖網址或整個資料夾。",
+                title: L("拖曳圖片、影片、PDF 或音訊到這裡"),
+                subtitle: L("就地壓縮並保留備份。按住 Command 放開為強力壓縮，也可以拖網址或整個資料夾。"),
                 symbol: "arrow.down.doc", height: 140
             )
             .overlay(alignment: .bottomTrailing) {
-                Button("選擇檔案…") { chooseFiles() }.padding(10)
+                Button(L("選擇檔案…")) { chooseFiles() }.padding(10)
             }
             let presets = settings.data.pipelines.filter(\.showInDropZone)
             if !presets.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
-                    DropTile(title: "強力最佳化", subtitle: "更小的檔案", symbol: "bolt", height: 50, aggressive: true)
+                    DropTile(title: L("強力最佳化"), subtitle: L("更小的檔案"), symbol: "bolt", height: 50, aggressive: true)
                     ForEach(presets) { p in
                         DropTile(title: p.name, subtitle: p.steps.map(\.label).joined(separator: " → "), symbol: "square.stack.3d.down.right", height: 50, pipeline: p)
                     }
                 }
             }
             HStack {
-                Text("最近處理").font(.headline)
+                Text(L("最近處理")).font(.headline)
                 Spacer()
-                Toggle("強力壓縮", isOn: $settings.data.aggressive).toggleStyle(.switch).controlSize(.mini)
-                Button("清除") { jobs.clearHistory() }.disabled(jobs.history.isEmpty)
+                Toggle(L("強力壓縮"), isOn: $settings.data.aggressive).toggleStyle(.switch).controlSize(.mini)
+                Button(L("清除")) { jobs.clearHistory() }.disabled(jobs.history.isEmpty)
             }
             if jobs.history.isEmpty {
-                Text("還沒有處理過的檔案。截圖、複製圖片或拖檔案進來都會出現在這裡。")
+                Text(L("還沒有處理過的檔案。截圖、複製圖片或拖檔案進來都會出現在這裡。"))
                     .font(.callout).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
@@ -269,6 +269,6 @@ final class WindowManager {
     }
 
     func showSettings() {
-        show("settings", title: "SmallImg 設定", size: CGSize(width: 680, height: 520)) { SettingsView() }
+        show("settings", title: L("SmallImg 設定"), size: CGSize(width: 680, height: 520)) { SettingsView() }
     }
 }

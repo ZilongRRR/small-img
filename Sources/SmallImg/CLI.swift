@@ -7,7 +7,9 @@ enum CLI {
         args.count > 1 && commands.contains(args[1])
     }
 
-    static let usage = """
+    static var usage: String { Lang.english ? usageEnglish : usageChinese }
+
+    static let usageChinese = """
     SmallImg 命令列
 
     用法：
@@ -31,6 +33,32 @@ enum CLI {
       --watermark <文字>    浮水印文字或圖片路徑
 
     格式：webp avif jxl jpeg png heic mp4 hevc av1 webm gif mp3 aac
+    """
+
+    static let usageEnglish = """
+    SmallImg command line
+
+    Usage:
+      smallimg optimise [options] files...       optimise in place (originals are backed up)
+      smallimg convert --to <format> files...    save a copy in another format
+      smallimg crop-pdf (--for-device <device> | --aspect 3:4) files...
+      smallimg pipeline <pipeline name> files...
+      smallimg restore files...                  restore the originals
+      smallimg devices                           list devices supported by crop-pdf
+      smallimg tools                             check that all compression tools are installed
+
+    Options:
+      -a, --aggressive      aggressive compression
+      --fit <size>          fit under a file size, e.g. 8MB, 500KB
+      --scale <ratio>       scale, e.g. 50% or 0.5
+      --width <pixels>      maximum width
+      --crop <ratio|size>   e.g. 16:9 or 1920x1080
+      --mute                remove audio
+      --speed <factor>      video or audio speed
+      --loudness <LUFS>     loudness normalisation, e.g. -14
+      --watermark <text>    watermark text or image path
+
+    Formats: webp avif jxl jpeg png heic mp4 hevc av1 webm gif mp3 aac
     """
 
     static func run(_ argv: [String]) async -> Int32 {
@@ -84,7 +112,7 @@ enum CLI {
             for d in PDFCropper.devices { print("\(d.0)  \(Int(d.1))x\(Int(d.2))") }
             return 0
         case "tools":
-            for t in Tool.allCases { print("\(t.rawValue): \(Tools.path(t) ?? "缺少，brew install \(t.brewPackage)")") }
+            for t in Tool.allCases { print("\(t.rawValue): \(Tools.path(t) ?? L("缺少，brew install %@", t.brewPackage))") }
             return Tools.missing.isEmpty ? 0 : 1
         default: break
         }
@@ -99,36 +127,36 @@ enum CLI {
             do {
                 switch cmd {
                 case "convert":
-                    guard let to else { print("請用 --to 指定格式"); return 1 }
+                    guard let to else { print(L("請用 --to 指定格式")); return 1 }
                     let out = try await Optimizer.convert(f, to: to, o, settings: settings, keepPrevious: false, previous: nil)
                     print("\(f.lastPathComponent) -> \(out.lastPathComponent)  \(formatBytes(f.fileSize)) -> \(formatBytes(out.fileSize))")
                 case "crop-pdf":
                     let ratio = aspect ?? device.flatMap(PDFCropper.aspect(forDevice:))
-                    guard let ratio else { print("請用 --for-device 或 --aspect 指定比例（smallimg devices 可看裝置清單）"); return 1 }
+                    guard let ratio else { print(L("請用 --for-device 或 --aspect 指定比例（smallimg devices 可看裝置清單）")); return 1 }
                     let out = try await PDFCropper.crop(f, aspect: ratio)
-                    print("已裁切：\(out.path)")
+                    print(L("已裁切：%@", out.path))
                 case "pipeline":
                     guard let p = settings.pipelines.first(where: { $0.name == pipelineName }) else {
-                        print("找不到流程「\(pipelineName ?? "")」。現有流程：\(settings.pipelines.map(\.name).joined(separator: "、"))")
+                        print(L("找不到流程「%@」。現有流程：%@", pipelineName ?? "", settings.pipelines.map(\.name).joined(separator: L("、"))))
                         return 1
                     }
                     let r = try await PipelineRunner.run(p, url: f, base: o, settings: settings)
                     print("\(f.lastPathComponent) -> \(r.url.path)")
                 case "restore":
                     let out = try Optimizer.restore(f)
-                    print("已還原：\(out.path)")
+                    print(L("已還原：%@", out.path))
                 default:
                     let r = try await Optimizer.optimise(f, o, settings: settings)
                     if r.skipped {
-                        print("\(f.lastPathComponent)：已經是最佳大小（\(formatBytes(r.newSize))）")
+                        print(L("%@：已經是最佳大小（%@）", f.lastPathComponent, formatBytes(r.newSize)))
                     } else {
                         let pct = r.originalSize > 0 ? Int((1 - Double(r.newSize) / Double(r.originalSize)) * 100) : 0
-                        print("\(r.url.lastPathComponent)：\(formatBytes(r.originalSize)) -> \(formatBytes(r.newSize))（-\(pct)%）")
+                        print(L("%@：%@ -> %@（-%@%）", r.url.lastPathComponent, formatBytes(r.originalSize), formatBytes(r.newSize), pct))
                     }
                 }
             } catch {
                 failed = true
-                print("\(f.lastPathComponent)：\(error.localizedDescription)")
+                print(L("%@：%@", f.lastPathComponent, error.localizedDescription))
             }
         }
         return failed ? 1 : 0

@@ -22,10 +22,10 @@ enum ToolError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .missing(let t): return "找不到 \(t.rawValue)，請執行 brew install \(t.brewPackage)"
+        case .missing(let t): return L("找不到 %@，請執行 brew install %@", t.rawValue, t.brewPackage)
         case .failed(let name, let code, let err):
             let tail = err.split(separator: "\n").suffix(3).joined(separator: " ")
-            return "\(name) 失敗（\(code)）：\(tail)"
+            return L("%@ 失敗（%@）：%@", name, code, tail)
         case .message(let m): return m
         }
     }

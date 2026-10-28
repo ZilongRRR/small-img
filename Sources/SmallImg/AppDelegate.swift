@@ -54,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         if !Tools.missing.isEmpty {
             let names = Tools.missing.map(\.brewPackage)
-            Notifier.error("缺少壓縮工具，請在終端機執行：\nbrew install \(Array(Set(names)).sorted().joined(separator: " "))")
+            Notifier.error(L("缺少壓縮工具，請在終端機執行：\nbrew install %@", Array(Set(names)).sorted().joined(separator: " ")))
         }
     }
 
@@ -93,20 +93,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
         let s = AppSettings.shared.data
 
-        menu.addItem(item("開啟壓縮視窗", #selector(openMain), key: "o"))
-        let clip = item("最佳化剪貼簿", #selector(optimiseClipboard), key: "c")
+        menu.addItem(item(L("開啟壓縮視窗"), #selector(openMain), key: "o"))
+        let clip = item(L("最佳化剪貼簿"), #selector(optimiseClipboard), key: "c")
         clip.keyEquivalentModifierMask = [.control, .shift]
         menu.addItem(clip)
-        menu.addItem(item("選擇檔案並最佳化…", #selector(chooseFiles)))
+        menu.addItem(item(L("選擇檔案並最佳化…"), #selector(chooseFiles)))
         menu.addItem(.separator())
 
-        menu.addItem(toggle("自動壓縮截圖", s.autoScreenshots, #selector(toggleScreenshots)))
-        menu.addItem(toggle("自動壓縮螢幕錄影", s.autoRecordings, #selector(toggleRecordings)))
-        menu.addItem(toggle("自動壓縮剪貼簿圖片", s.autoClipboard, #selector(toggleClipboard)))
-        menu.addItem(toggle("強力壓縮", s.aggressive, #selector(toggleAggressive)))
+        menu.addItem(toggle(L("自動壓縮截圖"), s.autoScreenshots, #selector(toggleScreenshots)))
+        menu.addItem(toggle(L("自動壓縮螢幕錄影"), s.autoRecordings, #selector(toggleRecordings)))
+        menu.addItem(toggle(L("自動壓縮剪貼簿圖片"), s.autoClipboard, #selector(toggleClipboard)))
+        menu.addItem(toggle(L("強力壓縮"), s.aggressive, #selector(toggleAggressive)))
         menu.addItem(.separator())
 
-        let pipelines = NSMenuItem(title: "執行流程", action: nil, keyEquivalent: "")
+        let pipelines = NSMenuItem(title: L("執行流程"), action: nil, keyEquivalent: "")
         let sub = NSMenu()
         for p in s.pipelines {
             let i = item(p.name, #selector(runPipeline(_:)))
@@ -118,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let recent = Jobs.shared.history.suffix(5).reversed()
         if !recent.isEmpty {
-            let r = NSMenuItem(title: "最近處理", action: nil, keyEquivalent: "")
+            let r = NSMenuItem(title: L("最近處理"), action: nil, keyEquivalent: "")
             let rs = NSMenu()
             for job in recent {
                 var title = job.displayName
@@ -130,10 +130,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             r.submenu = rs
             menu.addItem(r)
         }
-        menu.addItem(item("打開備份資料夾", #selector(openBackups)))
+        menu.addItem(item(L("打開備份資料夾"), #selector(openBackups)))
         menu.addItem(.separator())
-        menu.addItem(item("設定…", #selector(openSettings), key: ","))
-        menu.addItem(item("結束 SmallImg", #selector(quit), key: "q"))
+        menu.addItem(item(L("設定…"), #selector(openSettings), key: ","))
+        menu.addItem(item(L("結束 SmallImg"), #selector(quit), key: "q"))
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -171,7 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
-        panel.message = "選擇要執行「\(p.name)」的檔案"
+        panel.message = L("選擇要執行「%@」的檔案", p.name)
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK { Jobs.shared.handle(panel.urls, pipeline: p) }
     }

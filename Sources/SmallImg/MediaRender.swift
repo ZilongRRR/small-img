@@ -14,7 +14,7 @@ struct MediaInfo {
     static func probe(_ url: URL) async throws -> MediaInfo {
         let r = try await runTool(.ffprobe, ["-v", "error", "-print_format", "json", "-show_streams", "-show_format", url.path])
         guard let json = try JSONSerialization.jsonObject(with: Data(r.stdout.utf8)) as? [String: Any] else {
-            throw ToolError.message("無法讀取媒體資訊")
+            throw ToolError.message(L("無法讀取媒體資訊"))
         }
         var info = MediaInfo()
         if let fmt = json["format"] as? [String: Any], let d = fmt["duration"] as? String { info.duration = Double(d) ?? 0 }
@@ -71,7 +71,7 @@ enum FFmpeg {
 enum VideoRender {
     static func render(_ src: URL, target: Target, ext: String, _ o: Options, _ s: SettingsData, _ progress: ProgressHandler?) async throws -> URL {
         let info = try await MediaInfo.probe(src)
-        guard info.hasVideo else { throw ToolError.message("找不到影像軌") }
+        guard info.hasVideo else { throw ToolError.message(L("找不到影像軌")) }
         if target == .gif { return try await gif(src, info, o, s, progress) }
 
         var scale = o.scale
@@ -91,7 +91,7 @@ enum VideoRender {
 
         let audioK = audio ? 96.0 : 0
         var videoK = Double(limit) * 8 * 0.93 / outDuration / 1000 - audioK
-        guard videoK > 40 else { throw ToolError.message("影片太長，無法壓到 \(formatBytes(limit)) 以下") }
+        guard videoK > 40 else { throw ToolError.message(L("影片太長，無法壓到 %@ 以下", formatBytes(limit))) }
         let fps = min(info.fps, 60)
         // 每像素位元太低時先降解析度，畫質比硬壓好
         func bpp() -> Double { videoK * 1000 / max(1, cw * ch * scale * scale * fps) }
@@ -202,7 +202,7 @@ enum VideoRender {
                                  duration: duration, progress: progress, range: (0, 0.6))
             let frames = (try FileManager.default.contentsOfDirectory(atPath: dir.path))
                 .filter { $0.hasSuffix(".png") }.sorted().map { dir.appendingPathComponent($0).path }
-            guard !frames.isEmpty else { throw ToolError.message("無法擷取影格") }
+            guard !frames.isEmpty else { throw ToolError.message(L("無法擷取影格")) }
             try await runTool(.gifski, ["--fps", "\(fps)", "--quality", o.aggressive ? "70" : "85", "-o", out.path] + frames)
             progress?(1)
             guard let limit = o.fitUnder, out.fileSize > limit, attempt < 3 else { break }
@@ -215,13 +215,13 @@ enum VideoRender {
 enum AudioRender {
     static func render(_ src: URL, target: Target, ext: String, _ o: Options, _ progress: ProgressHandler?) async throws -> URL {
         let info = try await MediaInfo.probe(src)
-        guard info.hasAudio else { throw ToolError.message("找不到音訊軌") }
+        guard info.hasAudio else { throw ToolError.message(L("找不到音訊軌")) }
         let out = Paths.tempFile(ext: ext)
         let duration = max(0.1, info.duration / o.speed)
         var bitrateK: Int?
         if let limit = o.fitUnder {
             bitrateK = min(320, Int(Double(limit) * 8 * 0.95 / duration / 1000))
-            if bitrateK! < 24 { throw ToolError.message("音訊太長，無法壓到 \(formatBytes(limit)) 以下") }
+            if bitrateK! < 24 { throw ToolError.message(L("音訊太長，無法壓到 %@ 以下", formatBytes(limit))) }
         }
         var af = FFmpeg.atempo(o.speed)
         if let l = o.loudness { af.append("loudnorm=I=\(Int(l)):TP=-1.5:LRA=11") }
@@ -333,7 +333,7 @@ enum PDFCropper {
             guard n.count == 4 else { return nil }
             return CGRect(x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1])
         }
-        guard let doc = PDFDocument(url: src) else { throw ToolError.message("無法開啟 PDF") }
+        guard let doc = PDFDocument(url: src) else { throw ToolError.message(L("無法開啟 PDF")) }
         for i in 0..<doc.pageCount {
             guard let page = doc.page(at: i), i < boxes.count else { continue }
             let media = page.bounds(for: .mediaBox)
@@ -357,7 +357,7 @@ enum PDFCropper {
             page.setBounds(box.intersection(media), for: .cropBox)
         }
         let tmp = Paths.tempFile(ext: "pdf")
-        guard doc.write(to: tmp) else { throw ToolError.message("寫出 PDF 失敗") }
+        guard doc.write(to: tmp) else { throw ToolError.message(L("寫出 PDF 失敗")) }
         return try Optimizer.commit(tmp, current: url, final: url)
     }
 }

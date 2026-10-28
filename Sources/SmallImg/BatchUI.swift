@@ -71,7 +71,7 @@ final class BatchModel: ObservableObject {
                     row.newSize = r.newSize
                     row.status = r.skipped ? .skipped : .done
                 } catch is CancellationError {
-                    row.status = .failed("已取消")
+                    row.status = .failed(L("已取消"))
                 } catch {
                     row.status = .failed(error.localizedDescription)
                 }
@@ -103,22 +103,22 @@ struct BatchView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("批次處理 \(model.rows.count) 個檔案").font(.title3.bold())
+            Text(L("批次處理 %@ 個檔案", model.rows.count)).font(.title3.bold())
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                 GridRow {
-                    Text("類型").foregroundStyle(.secondary)
-                    Text("格式").foregroundStyle(.secondary)
-                    Text("解析度").foregroundStyle(.secondary)
-                    Text("強力").foregroundStyle(.secondary)
+                    Text(L("類型")).foregroundStyle(.secondary)
+                    Text(L("格式")).foregroundStyle(.secondary)
+                    Text(L("解析度")).foregroundStyle(.secondary)
+                    Text(L("強力")).foregroundStyle(.secondary)
                 }
                 ForEach(model.kinds, id: \.self) { k in
                     GridRow {
-                        Text("\(k.label)（\(model.count(k))）")
+                        Text(L("%@（%@）", k.label, model.count(k)))
                         if k == .pdf {
                             Text("PDF").foregroundStyle(.secondary)
                         } else {
                             Picker("", selection: model.binding(k).target) {
-                                Text("保持原格式").tag(Target.keep)
+                                Text(L("保持原格式")).tag(Target.keep)
                                 ForEach(Target.targets(for: k)) { Text($0.label).tag($0) }
                             }
                             .labelsHidden().frame(width: 130)
@@ -139,11 +139,11 @@ struct BatchView: View {
 
             HStack {
                 if model.running {
-                    Button("停止") { model.stop() }
+                    Button(L("停止")) { model.stop() }
                 } else {
-                    Button("開始") { model.start() }.keyboardShortcut(.defaultAction)
+                    Button(L("開始")) { model.start() }.keyboardShortcut(.defaultAction)
                 }
-                Button("全部還原") { model.restoreAll() }.disabled(model.running)
+                Button(L("全部還原")) { model.restoreAll() }.disabled(model.running)
                 Spacer()
                 Text("\(model.doneCount)/\(model.rows.count) · \(formatBytes(model.totalBefore)) → \(formatBytes(model.totalAfter))")
                     .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
@@ -171,9 +171,9 @@ struct BatchRowView: View {
             case .done:
                 Text("\(formatBytes(row.originalSize)) → \(formatBytes(row.newSize ?? 0))").monospacedDigit()
             case .skipped:
-                Text("已是最佳").foregroundStyle(.secondary)
+                Text(L("已是最佳")).foregroundStyle(.secondary)
             case .restored:
-                Text("已還原").foregroundStyle(.secondary)
+                Text(L("已還原")).foregroundStyle(.secondary)
             case .failed(let m):
                 Text(m).foregroundStyle(.red).lineLimit(1).help(m)
             case .queued:
@@ -200,7 +200,7 @@ final class BatchController {
         model = m
         window?.close()
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 560), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-        w.title = "SmallImg 批次處理"
+        w.title = L("SmallImg 批次處理")
         w.isReleasedWhenClosed = false
         w.contentView = NSHostingView(rootView: BatchView(model: m))
         w.center()
